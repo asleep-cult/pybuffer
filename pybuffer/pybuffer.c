@@ -78,6 +78,10 @@ void pybuffer_setcharat(pybuffer *buffer, size_t index, unsigned char c, PYBUFFE
         PYBUFFER_SET_ERROR(PYBUFFER_OUT_OF_BOUNDS);
         return;
     }
+    ensure_owned(buffer, error);
+    if (PYBUFFER_ERROR_OCCURED()) {
+        return;
+    }
     *(buffer->data + index) = c;
 }
 
