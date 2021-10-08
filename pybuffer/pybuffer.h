@@ -18,21 +18,21 @@
 
 typedef struct pybuffer {
     size_t size;
-    char *data;
+    unsigned char *data;
     bool owned;
 } pybuffer;
 
 pybuffer *pybuffer_new(size_t size, PYBUFFER_ERROR);
-pybuffer *pybuffer_from_string(char *data, size_t size, PYBUFFER_ERROR);
+pybuffer *pybuffer_from_string(unsigned char *data, size_t size, PYBUFFER_ERROR);
 
 void pybuffer_free(pybuffer *buffer);
 
 size_t pybuffer_size(pybuffer *buffer);
-char *pybuffer_data(pybuffer *buffer);
+unsigned char *pybuffer_data(pybuffer *buffer);
 
-char pybuffer_charat(pybuffer *buffer, size_t index, PYBUFFER_ERROR);
+unsigned char pybuffer_charat(pybuffer *buffer, size_t index, PYBUFFER_ERROR);
 
-char *pybuffer_read(pybuffer *buffer, size_t start, size_t stop, PYBUFFER_ERROR);
+unsigned char *pybuffer_read(pybuffer *buffer, size_t start, size_t stop, PYBUFFER_ERROR);
 
 uint8_t pybuffer_readuint8(pybuffer *buffer, size_t offset, int byteorder, PYBUFFER_ERROR);
 int8_t pybuffer_readint8(pybuffer *buffer, size_t offset, int byteorder, PYBUFFER_ERROR);
@@ -49,8 +49,8 @@ int64_t pybuffer_readint64(pybuffer *buffer, size_t offset, int byteorder, PYBUF
 float pybuffer_readfloat(pybuffer *buffer, size_t offset, int byteorder, PYBUFFER_ERROR);
 double pybuffer_readdouble(pybuffer *buffer, size_t offset, int byteorder, PYBUFFER_ERROR);
 
-void pybuffer_write(pybuffer *buffer, char *data, size_t start, size_t stop, PYBUFFER_ERROR);
-void pybuffer_fill(pybuffer *buffer, char c, PYBUFFER_ERROR);
+void pybuffer_write(pybuffer *buffer, unsigned char *data, size_t start, size_t stop, PYBUFFER_ERROR);
+void pybuffer_fill(pybuffer *buffer, unsigned char c, PYBUFFER_ERROR);
 
 void pybuffer_writeuint8(pybuffer *buffer, uint8_t number, size_t offset, int byteorder, PYBUFFER_ERROR);
 int8_t pybuffer_writeint8(pybuffer *buffer, int8_t number, size_t offset, int byteorder, PYBUFFER_ERROR);

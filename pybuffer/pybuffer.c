@@ -6,7 +6,7 @@
 void ensure_owned(pybuffer *buffer, PYBUFFER_ERROR)
 {
     if (!buffer->owned) {
-        char *data = malloc(buffer->size);
+        unsigned char *data = malloc(buffer->size);
         if (data == NULL) {
             PYBUFFER_SET_ERROR(PYBUFFER_NOMEM);
             return;
@@ -39,7 +39,7 @@ nomem:
     return NULL;
 }
 
-pybuffer *pybuffer_from_string(char *data, size_t size, PYBUFFER_ERROR)
+pybuffer *pybuffer_from_string(unsigned char *data, size_t size, PYBUFFER_ERROR)
 {
     pybuffer *buffer = malloc(sizeof(*buffer));
     if (buffer == NULL) {
@@ -61,9 +61,9 @@ void pybuffer_free(pybuffer *buffer)
 }
 
 size_t pybuffer_size(pybuffer *buffer) { return buffer->size; }
-char *pybuffer_data(pybuffer *buffer) { return buffer->data; }
+unsigned char *pybuffer_data(pybuffer *buffer) { return buffer->data; }
 
-char pybuffer_charat(pybuffer *buffer, size_t index, PYBUFFER_ERROR)
+unsigned char pybuffer_charat(pybuffer *buffer, size_t index, PYBUFFER_ERROR)
 {
     if (index >= buffer->size) {
         PYBUFFER_SET_ERROR(PYBUFFER_OUT_OF_BOUNDS);
@@ -72,13 +72,13 @@ char pybuffer_charat(pybuffer *buffer, size_t index, PYBUFFER_ERROR)
     return *(buffer->data + index);
 }
 
-char *pybuffer_read(pybuffer *buffer, size_t start, size_t stop, PYBUFFER_ERROR)
+unsigned char *pybuffer_read(pybuffer *buffer, size_t start, size_t stop, PYBUFFER_ERROR)
 {
     if (start >= buffer->size || stop >= buffer->size) {
         PYBUFFER_SET_ERROR(PYBUFFER_OUT_OF_BOUNDS);
         return NULL;
     }
-    char *data = malloc(stop - start);
+    unsigned char *data = malloc(stop - start);
     if (data == NULL) {
         PYBUFFER_SET_ERROR(PYBUFFER_NOMEM);
         return NULL;
@@ -87,7 +87,7 @@ char *pybuffer_read(pybuffer *buffer, size_t start, size_t stop, PYBUFFER_ERROR)
     return data;
 }
 
-void pybuffer_write(pybuffer *buffer, char *data, size_t start, size_t stop, PYBUFFER_ERROR)
+void pybuffer_write(pybuffer *buffer, unsigned char *data, size_t start, size_t stop, PYBUFFER_ERROR)
 {
     if (start >= buffer->size) {
         PYBUFFER_SET_ERROR(PYBUFFER_OUT_OF_BOUNDS);
@@ -103,7 +103,7 @@ void pybuffer_write(pybuffer *buffer, char *data, size_t start, size_t stop, PYB
     memmove(buffer->data, data + start, stop - start);
 }
 
-void pybuffer_fill(pybuffer *buffer, char c, PYBUFFER_ERROR)
+void pybuffer_fill(pybuffer *buffer, unsigned char c, PYBUFFER_ERROR)
 {
     ensure_owned(buffer, error);
     if (PYBUFFER_ERROR_OCCURED()) {

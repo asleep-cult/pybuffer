@@ -89,7 +89,7 @@ _pybuffer.decl_function(
 )
 _pybuffer.decl_function(
     'charat',
-    _ctypes.c_byte,
+    _ctypes.c_ubyte,
     buffer=_ctypes.c_void_p,
     index=_ctypes.c_size_t,
     error=True
@@ -100,6 +100,20 @@ _pybuffer.decl_function(
     buffer=_ctypes.c_void_p,
     start=_ctypes.c_size_t,
     stop=_ctypes.c_size_t,
+    error=True
+)
+_pybuffer.decl_function(
+    'write',
+    buffer=_ctypes.c_void_p,
+    data=_ctypes.c_char_p,
+    start=_ctypes.c_size_t,
+    stop=_ctypes.c_size_t,
+    error=True
+)
+_pybuffer.decl_function(
+    'fill',
+    buffer=_ctypes.c_void_p,
+    char=_ctypes.c_char,
     error=True
 )
 
@@ -114,16 +128,25 @@ class Buffer:
         self.__buffer__ = _pybuffer.new(size)
         return self
 
+    def fill(self, char):
+        if isinstance(char, (bytes, str)):
+            char = ord(char)
+        elif isinstance(char, int):
+            if char < 0 or char > 255:
+                raise ValueError('char should be in range(0, 256)')
+        else:
+            raise TypeError(f'char should be a str, byte string or int, got {type(char)!r}')
+
+        _pybuffer.fill(self.__buffer__, char)
+
     def __len__(self):
         return _pybuffer.size(self.__buffer__)
 
     def __getitem__(self, index):
+        if index < 0:
+            index = len(self) + index
         return _pybuffer.charat(self.__buffer__, index)
 
     def __del__(self):
         if self.__buffer__ is not None:
             _pybuffer.free(self.__buffer__)
-
-
-buffer = Buffer.from_size(500)
-print(buffer[501])
