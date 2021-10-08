@@ -118,6 +118,10 @@ _pybuffer.decl_function(
 )
 
 
+def _typename(obj):
+    return repr(type(obj).__name__)
+
+
 class Buffer:
     def __init__(self):
         pass
@@ -135,17 +139,57 @@ class Buffer:
             if char < 0 or char > 255:
                 raise ValueError('char should be in range(0, 256)')
         else:
-            raise TypeError(f'char should be a str, byte string or int, got {type(char)!r}')
+            raise TypeError(f'char should be a string, byte string or integer, got {_typename(char)}')
 
         _pybuffer.fill(self.__buffer__, char)
+
+    def read(self, start=None, stop=None):
+        if start is None:
+            start = 0
+        else:
+            if not isinstance(start, int):
+                raise TypeError(f'start should be an integer, got {_typename(start)}')
+
+            if start < 0:
+                start = len(self) + start
+
+        if stop is None:
+            stop = len(self)
+        else:
+            if not isinstance(stop, int):
+                raise TypeError(f'stop should be an integer, got {_typename(stop)}')
+
+            if stop < 0:
+                stop = len(self) + stop
+
+        return _pybuffer.read(self.__buffer__, start, stop)
+
+    def write(self, data, offset=None):
+        if not isinstance(data, bytes):
+            raise TypeError(f'data bould be a byte string, got {_typename(data)}')
+
+        if offset is None:
+            offset = 0
+        else:
+            if not isinstance(data, int):
+                raise TypeError(f'offset should be an integer or None, got {_typename(offset)}')
+
+            if offset < 0:
+                offset = len(self) + offset
+
+        return _pybuffer.write(self.__buffer__, data, offset, len(data))
 
     def __len__(self):
         return _pybuffer.size(self.__buffer__)
 
-    def __getitem__(self, index):
-        if index < 0:
-            index = len(self) + index
-        return _pybuffer.charat(self.__buffer__, index)
+    def __getitem__(self, indice):
+        if not isinstance(indice, int):
+            raise TypeError(f'Buffer indices should be integers, got {_typename(indice)}')
+
+        if indice < 0:
+            indice = len(self) + indice
+
+        return _pybuffer.charat(self.__buffer__, indice)
 
     def __del__(self):
         if self.__buffer__ is not None:
