@@ -126,6 +126,70 @@ _pybuffer.decl_function(
     char=_ctypes.c_char,
     error=True
 )
+_pybuffer.decl_function(
+    'writeuint8',
+    buffer=_ctypes.c_void_p,
+    number=_ctypes.c_uint8,
+    offset=_ctypes.c_size_t,
+    byteorder=_ctypes.c_int,
+    error=True
+)
+_pybuffer.decl_function(
+    'writeint8',
+    buffer=_ctypes.c_void_p,
+    number=_ctypes.c_int8,
+    offset=_ctypes.c_size_t,
+    byteorder=_ctypes.c_int,
+    error=True
+)
+_pybuffer.decl_function(
+    'writeuint16',
+    buffer=_ctypes.c_void_p,
+    number=_ctypes.c_uint16,
+    offset=_ctypes.c_size_t,
+    byteorder=_ctypes.c_int,
+    error=True
+)
+_pybuffer.decl_function(
+    'writeint16',
+    buffer=_ctypes.c_void_p,
+    number=_ctypes.c_int16,
+    offset=_ctypes.c_size_t,
+    byteorder=_ctypes.c_int,
+    error=True
+)
+_pybuffer.decl_function(
+    'writeuint32',
+    buffer=_ctypes.c_void_p,
+    number=_ctypes.c_uint32,
+    offset=_ctypes.c_size_t,
+    byteorder=_ctypes.c_int,
+    error=True
+)
+_pybuffer.decl_function(
+    'writeint32',
+    buffer=_ctypes.c_void_p,
+    number=_ctypes.c_int32,
+    offset=_ctypes.c_size_t,
+    byteorder=_ctypes.c_int,
+    error=True
+)
+_pybuffer.decl_function(
+    'writeuint64',
+    buffer=_ctypes.c_void_p,
+    number=_ctypes.c_uint64,
+    offset=_ctypes.c_size_t,
+    byteorder=_ctypes.c_int,
+    error=True
+)
+_pybuffer.decl_function(
+    'writeint64',
+    buffer=_ctypes.c_void_p,
+    number=_ctypes.c_int64,
+    offset=_ctypes.c_size_t,
+    byteorder=_ctypes.c_int,
+    error=True
+)
 
 
 def _typename(obj):
@@ -245,6 +309,18 @@ class Buffer:
 
         return _pybuffer.read(self.__buffer__, start, stop)[:stop - start]
 
+    def _get_offset(self, offset):
+        if offset is None:
+            return 0
+        else:
+            if not isinstance(offset, int):
+                raise TypeError(f'offset should be an integer or None, got {_typename(offset)}')
+
+            if offset < 0:
+                return len(self) + offset
+
+            return offset
+
     def write(self, data, offset=None):
         try:
             data = bytesconv(data)
@@ -254,16 +330,47 @@ class Buffer:
             except TypeError:
                 raise TypeError(f'cannot write {_typename(data)} object to Buffer') from None
 
-        if offset is None:
-            offset = 0
+        return _pybuffer.write(self.__buffer__, data, len(data), self._get_offset(offset))
+
+    def _get_byteorder(self, byteorder):
+        if byteorder == 'little':
+            return _pybuffer.PYBUFFER_LITTLE_ENDIAN
+        elif byteorder == 'big':
+            return _pybuffer.PYBUFFER_BIG_ENDIAN
         else:
-            if not isinstance(offset, int):
-                raise TypeError(f'offset should be an integer or None, got {_typename(offset)}')
+            raise ValueError('byteorder should be \'little\' or \'big\'')
 
-            if offset < 0:
-                offset = len(self) + offset
+    def writeint8(self, number, byteorder, offset=None, *, signed=False):
+        byteorder = self._get_byteorder(byteorder)
+        offset = self._get_offset(offset)
+        if signed:
+            return _pybuffer.writeint8(self.__buffer__, number, offset, byteorder)
+        else:
+            return _pybuffer.writeuint8(self.__buffer__, number, offset, byteorder)
 
-        return _pybuffer.write(self.__buffer__, data, len(data), offset)
+    def writeint16(self, number, byteorder, offset=None, *, signed=False):
+        byteorder = self._get_byteorder(byteorder)
+        offset = self._get_offset(offset)
+        if signed:
+            return _pybuffer.writeint16(self.__buffer__, number, offset, byteorder)
+        else:
+            return _pybuffer.writeuint16(self.__buffer__, number, offset, byteorder)
+
+    def writeint32(self, number, byteorder, offset=None, *, signed=False):
+        byteorder = self._get_byteorder(byteorder)
+        offset = self._get_offset(offset)
+        if signed:
+            return _pybuffer.writeint32(self.__buffer__, number, offset, byteorder)
+        else:
+            return _pybuffer.writeuint32(self.__buffer__, number, offset, byteorder)
+
+    def writeint64(self, number, byteorder, offset=None, *, signed=False):
+        byteorder = self._get_byteorder(byteorder)
+        offset = self._get_offset(offset)
+        if signed:
+            return _pybuffer.writeint64(self.__buffer__, number, offset, byteorder)
+        else:
+            return _pybuffer.writeuint64(self.__buffer__, number, offset, byteorder)
 
     def decode(self, encoding='utf-8', errors='strict'):
         data = _pybuffer.data(self.__buffer__)[:len(self)]
@@ -328,3 +435,8 @@ class Buffer:
     def __del__(self):
         if self.__buffer__ is not None:
             _pybuffer.free(self.__buffer__)
+
+
+buffer = Buffer.from_size(10)
+# buffer.writeint8(255, 'little')
+print(buffer)

@@ -54,16 +54,16 @@ int pybuffer_write(pybuffer *buffer, unsigned char *data, size_t size, size_t of
 void pybuffer_fill(pybuffer *buffer, unsigned char c, PYBUFFER_ERROR);
 
 void pybuffer_writeuint8(pybuffer *buffer, uint8_t number, size_t offset, int byteorder, PYBUFFER_ERROR);
-int8_t pybuffer_writeint8(pybuffer *buffer, int8_t number, size_t offset, int byteorder, PYBUFFER_ERROR);
+void pybuffer_writeint8(pybuffer *buffer, int8_t number, size_t offset, int byteorder, PYBUFFER_ERROR);
 
-uint16_t pybuffer_writeuint16(pybuffer *buffer, uint16_t number, size_t offset, int byteorder, PYBUFFER_ERROR);
-int16_t pybuffer_writeint16(pybuffer *buffer, int16_t number, size_t offset, int byteorder, PYBUFFER_ERROR);
+void pybuffer_writeuint16(pybuffer *buffer, uint16_t number, size_t offset, int byteorder, PYBUFFER_ERROR);
+void pybuffer_writeint16(pybuffer *buffer, int16_t number, size_t offset, int byteorder, PYBUFFER_ERROR);
 
-uint32_t pybuffer_writeuint32(pybuffer *buffer, uint32_t number, size_t offset, int byteorder, PYBUFFER_ERROR);
-int32_t pybuffer_writeint32(pybuffer *buffer, int32_t number, size_t offset, int byteorder, PYBUFFER_ERROR);
+void pybuffer_writeuint32(pybuffer *buffer, uint32_t number, size_t offset, int byteorder, PYBUFFER_ERROR);
+void pybuffer_writeint32(pybuffer *buffer, int32_t number, size_t offset, int byteorder, PYBUFFER_ERROR);
 
-uint64_t pybuffer_writeuint64(pybuffer *buffer, uint64_t number, size_t offset, int byteorder, PYBUFFER_ERROR);
-int64_t pybuffer_writeint64(pybuffer *buffer, int64_t number, size_t offset, int byteorder, PYBUFFER_ERROR);
+void pybuffer_writeuint64(pybuffer *buffer, uint64_t number, size_t offset, int byteorder, PYBUFFER_ERROR);
+void pybuffer_writeint64(pybuffer *buffer, int64_t number, size_t offset, int byteorder, PYBUFFER_ERROR);
 
 float pybuffer_writefloat(pybuffer *buffer, float number, size_t offset, int byteorder, PYBUFFER_ERROR);
 double pybuffer_writedouble(pybuffer *buffer, double number, size_t offset, int byteorder, PYBUFFER_ERROR);
