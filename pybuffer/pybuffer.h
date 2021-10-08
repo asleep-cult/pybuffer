@@ -31,6 +31,7 @@ size_t pybuffer_size(pybuffer *buffer);
 unsigned char *pybuffer_data(pybuffer *buffer);
 
 unsigned char pybuffer_charat(pybuffer *buffer, size_t index, PYBUFFER_ERROR);
+void pybuffer_setcharat(pybuffer *buffer, size_t index, unsigned char c, PYBUFFER_ERROR);
 
 unsigned char *pybuffer_read(pybuffer *buffer, size_t start, size_t stop, PYBUFFER_ERROR);
 
@@ -49,7 +50,7 @@ int64_t pybuffer_readint64(pybuffer *buffer, size_t offset, int byteorder, PYBUF
 float pybuffer_readfloat(pybuffer *buffer, size_t offset, int byteorder, PYBUFFER_ERROR);
 double pybuffer_readdouble(pybuffer *buffer, size_t offset, int byteorder, PYBUFFER_ERROR);
 
-void pybuffer_write(pybuffer *buffer, unsigned char *data, size_t start, size_t stop, PYBUFFER_ERROR);
+int pybuffer_write(pybuffer *buffer, unsigned char *data, size_t size, size_t offset, PYBUFFER_ERROR);
 void pybuffer_fill(pybuffer *buffer, unsigned char c, PYBUFFER_ERROR);
 
 void pybuffer_writeuint8(pybuffer *buffer, uint8_t number, size_t offset, int byteorder, PYBUFFER_ERROR);

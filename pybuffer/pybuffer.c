@@ -72,35 +72,48 @@ unsigned char pybuffer_charat(pybuffer *buffer, size_t index, PYBUFFER_ERROR)
     return *(buffer->data + index);
 }
 
+void pybuffer_setcharat(pybuffer *buffer, size_t index, unsigned char c, PYBUFFER_ERROR)
+{
+    if (index >= buffer->size) {
+        PYBUFFER_SET_ERROR(PYBUFFER_OUT_OF_BOUNDS);
+        return;
+    }
+    *(buffer->data + index) = c;
+}
+
 unsigned char *pybuffer_read(pybuffer *buffer, size_t start, size_t stop, PYBUFFER_ERROR)
 {
-    if (start >= buffer->size || stop >= buffer->size) {
+    if (start >= buffer->size) {
         PYBUFFER_SET_ERROR(PYBUFFER_OUT_OF_BOUNDS);
         return NULL;
+    }
+    if (stop >= buffer->size) {
+        stop = buffer->size;
     }
     unsigned char *data = malloc(stop - start);
     if (data == NULL) {
         PYBUFFER_SET_ERROR(PYBUFFER_NOMEM);
         return NULL;
     }
-    memmove(data, buffer->data, stop - start);
+    memmove(data, buffer->data + start, stop - start);
     return data;
 }
 
-void pybuffer_write(pybuffer *buffer, unsigned char *data, size_t start, size_t stop, PYBUFFER_ERROR)
+int pybuffer_write(pybuffer *buffer, unsigned char *data, size_t size, size_t offset, PYBUFFER_ERROR)
 {
-    if (start >= buffer->size) {
+    if (offset >= buffer->size) {
         PYBUFFER_SET_ERROR(PYBUFFER_OUT_OF_BOUNDS);
-        return;
+        return 0;
     }
-    if (stop >= buffer->size) {
-        stop = buffer->size;
+    if (size + offset >= buffer->size) {
+        size = buffer->size;
     }
     ensure_owned(buffer, error);
     if (PYBUFFER_ERROR_OCCURED()) {
-        return;
+        return 0;
     }
-    memmove(buffer->data, data + start, stop - start);
+    memmove(buffer->data + offset, data, size);
+    return size;
 }
 
 void pybuffer_fill(pybuffer *buffer, unsigned char c, PYBUFFER_ERROR)

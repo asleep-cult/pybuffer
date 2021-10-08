@@ -1,5 +1,6 @@
 import ctypes as _ctypes
 import os as _os
+import string as _string
 import sys as _sys
 
 
@@ -51,6 +52,8 @@ class _CBinding:
         setattr(self, name, cfunc)
 
 
+char_p = _ctypes.POINTER(_ctypes.c_char)
+
 _pybuffer = _CBinding(_os.path.join(_os.path.dirname(__file__), 'pybuffer.o'))
 
 _pybuffer.define('PYBUFFER_OK', 0)
@@ -84,7 +87,7 @@ _pybuffer.decl_function(
 )
 _pybuffer.decl_function(
     'data',
-    _ctypes.c_char_p,
+    char_p,
     buffer=_ctypes.c_void_p
 )
 _pybuffer.decl_function(
@@ -95,8 +98,14 @@ _pybuffer.decl_function(
     error=True
 )
 _pybuffer.decl_function(
+    'setcharat',
+    buffer=_ctypes.c_void_p,
+    char=_ctypes.c_ubyte,
+    index=_ctypes.c_size_t
+)
+_pybuffer.decl_function(
     'read',
-    _ctypes.c_char_p,
+    char_p,
     buffer=_ctypes.c_void_p,
     start=_ctypes.c_size_t,
     stop=_ctypes.c_size_t,
@@ -104,10 +113,11 @@ _pybuffer.decl_function(
 )
 _pybuffer.decl_function(
     'write',
+    _ctypes.c_size_t,
     buffer=_ctypes.c_void_p,
     data=_ctypes.c_char_p,
-    start=_ctypes.c_size_t,
-    stop=_ctypes.c_size_t,
+    size=_ctypes.c_size_t,
+    offset=_ctypes.c_size_t,
     error=True
 )
 _pybuffer.decl_function(
@@ -122,26 +132,97 @@ def _typename(obj):
     return repr(type(obj).__name__)
 
 
+def charconv(char):
+    if isinstance(char, (str, bytes)):
+        return ord(char)
+    elif isinstance(char, int):
+        if char < 0 or char > 255:
+            raise ValueError('char should be in range(0, 256)')
+        return char
+    else:
+        raise TypeError(f'char should be a string, byte string or integer, got {_typename(char)}')
+
+
+def bytesconv(data):
+    if isinstance(data, bytes):
+        return data
+    elif isinstance(data, str):
+        return data.encode('utf-8')
+    elif isinstance(data, int):
+        return bchr(data)
+    elif isinstance(data, memoryview):
+        return data.tobytes()
+    elif isinstance(data, bytearray):
+        return bytes(data)
+    else:
+        raise TypeError(f'data should be a string or bytes-like object, got {_typename(data)}')
+
+
+def bchr(char):
+    if char < 0 or char > 255:
+        raise ValueError('char should be in range(0, 256)')
+    return char.to_bytes(1, _sys.byteorder)
+
+
+class _BufferChar(int):
+    def __lt__(self, other):
+        return super().__lt__(charconv(other))
+
+    def __le__(self, other):
+        return super().__le__(charconv(other))
+
+    def __eq__(self, other):
+        return super().__eq__(charconv(other))
+
+    def __ne__(self, other):
+        return super().__ne__(charconv(other))
+
+    def __ge__(self, other):
+        return super().__ge__(charconv(other))
+
+    def __gt__(self, other):
+        return super().__gt__(charconv(other))
+
+
+_chartable = []
+for i in range(256):
+    _chartable.append(_BufferChar(i))
+
+
 class Buffer:
-    def __init__(self):
-        pass
+    __slots__ = ('__buffer__',)
+
+    def __new__(cls, initializer):
+        try:
+            data = bytesconv(initializer)
+        except TypeError:
+            try:
+                data = tuple(charconv(char) for char in initializer)
+            except TypeError:
+                raise TypeError(f'cannot convert {_typename(initializer)} to Buffer') from None
+
+            self = cls.from_size(len(data))
+            for i in range(len(data)):
+                self[i] = data[i]
+
+            return self
+        else:
+            self = object.__new__(cls)
+            self.__buffer__ = _pybuffer.from_string(initializer, len(initializer))
+            return self
 
     @classmethod
-    def from_size(cls, size):
-        self = cls.__new__(cls)
+    def from_size(cls, size, fill=None):
+        self = object.__new__(cls)
         self.__buffer__ = _pybuffer.new(size)
+
+        if fill is not None:
+            self.fill(fill)
+
         return self
 
     def fill(self, char):
-        if isinstance(char, (bytes, str)):
-            char = ord(char)
-        elif isinstance(char, int):
-            if char < 0 or char > 255:
-                raise ValueError('char should be in range(0, 256)')
-        else:
-            raise TypeError(f'char should be a string, byte string or integer, got {_typename(char)}')
-
-        _pybuffer.fill(self.__buffer__, char)
+        _pybuffer.fill(self.__buffer__, charconv(char))
 
     def read(self, start=None, stop=None):
         if start is None:
@@ -162,22 +243,31 @@ class Buffer:
             if stop < 0:
                 stop = len(self) + stop
 
-        return _pybuffer.read(self.__buffer__, start, stop)
+        return _pybuffer.read(self.__buffer__, start, stop)[:stop - start]
 
     def write(self, data, offset=None):
-        if not isinstance(data, bytes):
-            raise TypeError(f'data bould be a byte string, got {_typename(data)}')
+        try:
+            data = bytesconv(data)
+        except TypeError:
+            try:
+                data = bytes(charconv(char) for char in data)
+            except TypeError:
+                raise TypeError(f'cannot write {_typename(data)} object to Buffer') from None
 
         if offset is None:
             offset = 0
         else:
-            if not isinstance(data, int):
+            if not isinstance(offset, int):
                 raise TypeError(f'offset should be an integer or None, got {_typename(offset)}')
 
             if offset < 0:
                 offset = len(self) + offset
 
-        return _pybuffer.write(self.__buffer__, data, offset, len(data))
+        return _pybuffer.write(self.__buffer__, data, len(data), offset)
+
+    def decode(self, encoding='utf-8', errors='strict'):
+        data = _pybuffer.data(self.__buffer__)[:len(self)]
+        return data.decode(encoding, errors)
 
     def __len__(self):
         return _pybuffer.size(self.__buffer__)
@@ -189,7 +279,51 @@ class Buffer:
         if indice < 0:
             indice = len(self) + indice
 
-        return _pybuffer.charat(self.__buffer__, indice)
+        return _chartable[_pybuffer.charat(self.__buffer__, indice)]
+
+    def __setitem__(self, indice, char):
+        if not isinstance(indice, int):
+            raise TypeError(f'Buffer indices should be integers, got {_typename(indice)}')
+
+        if indice < 0:
+            indice = len(self) + indice
+
+        _pybuffer.setcharat(self.__buffer__, indice, char)
+
+    def __repr__(self):
+        # Mainly copied from bytes.__repr__
+        # https://github.com/python/cpython/blob/main/Objects/bytesobject.c#L1291-L1364
+        size = 0
+        for char in self:
+            if char == b'\'':
+                size += 2
+            elif char in (b'\\', b'\t', b'\n', b'\r'):
+                size += 4
+            elif char < b' ' or char >= 0x7F:
+                size += 4
+            else:
+                size += 1
+
+        buffer = Buffer.from_size(size)
+
+        i = 0
+        for char in self:
+            if char == b'\'' or char == b'\\':
+                i += buffer.write(('\\', char), i)
+            elif char == b'\t':
+                i += buffer.write(b'\\t', i)
+            elif char == b'\n':
+                i += buffer.write(b'\\n', i)
+            elif char == b'\r':
+                i += buffer.write(b'\\r', i)
+            elif char < b' ' or char >= 0x7F:
+                i += buffer.write(b'\\x', i)
+                i += buffer.write(_string.hexdigits[(char & 0xF0) >> 4], i)
+                i += buffer.write(_string.hexdigits[char & 0xF], i)
+            else:
+                i += buffer.write(char, i)
+
+        return f'<Buffer \'{buffer.decode()}\'>'
 
     def __del__(self):
         if self.__buffer__ is not None:
