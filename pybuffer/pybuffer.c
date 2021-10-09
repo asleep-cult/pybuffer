@@ -71,7 +71,7 @@ unsigned char *pybuffer_data(pybuffer *buffer) { return buffer->data; }
 
 unsigned char pybuffer_charat(pybuffer *buffer, size_t index, PYBUFFER_ERROR)
 {
-    if (index >= buffer->size) {
+    if (index > buffer->size) {
         PYBUFFER_SET_ERROR(PYBUFFER_OUT_OF_BOUNDS);
         return 0;
     }
@@ -80,7 +80,7 @@ unsigned char pybuffer_charat(pybuffer *buffer, size_t index, PYBUFFER_ERROR)
 
 void pybuffer_setcharat(pybuffer *buffer, size_t index, unsigned char c, PYBUFFER_ERROR)
 {
-    if (index >= buffer->size) {
+    if (index > buffer->size) {
         PYBUFFER_SET_ERROR(PYBUFFER_OUT_OF_BOUNDS);
         return;
     }
@@ -93,12 +93,9 @@ void pybuffer_setcharat(pybuffer *buffer, size_t index, unsigned char c, PYBUFFE
 
 unsigned char *pybuffer_read(pybuffer *buffer, size_t start, size_t stop, PYBUFFER_ERROR)
 {
-    if (start >= buffer->size) {
+    if (start > buffer->size || stop > buffer->size) {
         PYBUFFER_SET_ERROR(PYBUFFER_OUT_OF_BOUNDS);
         return NULL;
-    }
-    if (stop >= buffer->size) {
-        stop = buffer->size;
     }
     unsigned char *data = malloc(stop - start);
     if (data == NULL) {
@@ -111,12 +108,9 @@ unsigned char *pybuffer_read(pybuffer *buffer, size_t start, size_t stop, PYBUFF
 
 int pybuffer_write(pybuffer *buffer, unsigned char *data, size_t size, size_t offset, PYBUFFER_ERROR)
 {
-    if (offset >= buffer->size) {
+    if (size + offset > buffer->size) {
         PYBUFFER_SET_ERROR(PYBUFFER_OUT_OF_BOUNDS);
         return 0;
-    }
-    if (size + offset >= buffer->size) {
-        size = buffer->size;
     }
     ensure_owned(buffer, error);
     if (PYBUFFER_ERROR_OCCURED()) {
@@ -135,58 +129,62 @@ void pybuffer_fill(pybuffer *buffer, unsigned char c, PYBUFFER_ERROR)
     memset(buffer->data, c, buffer->size);
 }
 
-void pybuffer_writeuint8(pybuffer *buffer, uint8_t number, size_t offset, int byteorder, PYBUFFER_ERROR)
+size_t pybuffer_writeuint8(pybuffer *buffer, uint8_t number, size_t offset, int byteorder, PYBUFFER_ERROR)
 {
-    if (offset + 1 >= buffer->size) {
+    if (offset + 1 > buffer->size) {
         PYBUFFER_SET_ERROR(PYBUFFER_OUT_OF_BOUNDS);
+        return 0;
     }
     buffer->data[offset] = number & 0xFF;
+    return 1;
 }
 
-void pybuffer_writeint8(pybuffer *buffer, int8_t number, size_t offset, int byteorder, PYBUFFER_ERROR)
+size_t pybuffer_writeint8(pybuffer *buffer, int8_t number, size_t offset, int byteorder, PYBUFFER_ERROR)
 {
     pybuffer_writeuint8(buffer, (uint8_t)number, offset, byteorder, error);
 }
 
-void pybuffer_writeuint16(pybuffer *buffer, uint16_t number, size_t offset, int byteorder, PYBUFFER_ERROR)
+size_t pybuffer_writeuint16(pybuffer *buffer, uint16_t number, size_t offset, int byteorder, PYBUFFER_ERROR)
 {
-    if (offset + 2 >= buffer->size) {
+    if (offset + 2 > buffer->size) {
         PYBUFFER_SET_ERROR(PYBUFFER_OUT_OF_BOUNDS);
-        return;
+        return 0;
     }
     offset = PYBUFFER_BASEOFFSET(offset, byteorder, 2);
     buffer->data[PYBUFFER_OFFSET(offset, byteorder, 0)] = number & 0xFF;
     buffer->data[PYBUFFER_OFFSET(offset, byteorder, 1)] = (number >> 8) & 0xFF;
+    return 2;
 }
 
-void pybuffer_writeint16(pybuffer *buffer, int16_t number, size_t offset, int byteorder, PYBUFFER_ERROR)
+size_t pybuffer_writeint16(pybuffer *buffer, int16_t number, size_t offset, int byteorder, PYBUFFER_ERROR)
 {
     return pybuffer_writeuint16(buffer, (int16_t)number, offset, byteorder, error);
 }
 
-void pybuffer_writeuint32(pybuffer *buffer, uint32_t number, size_t offset, int byteorder, PYBUFFER_ERROR)
+size_t pybuffer_writeuint32(pybuffer *buffer, uint32_t number, size_t offset, int byteorder, PYBUFFER_ERROR)
 {
-    if (offset + 4 >= buffer->size) {
+    if (offset + 4 > buffer->size) {
         PYBUFFER_SET_ERROR(PYBUFFER_OUT_OF_BOUNDS);
-        return;
+        return 0;
     }
     offset = PYBUFFER_BASEOFFSET(offset, byteorder, 4);
     buffer->data[PYBUFFER_OFFSET(offset, byteorder, 0)] = number & 0xFF;
     buffer->data[PYBUFFER_OFFSET(offset, byteorder, 1)] = (number >> 8) & 0xFF;
     buffer->data[PYBUFFER_OFFSET(offset, byteorder, 2)] = (number >> 16) & 0xFF;
     buffer->data[PYBUFFER_OFFSET(offset, byteorder, 3)] = (number >> 24) & 0xFF;
+    return 4;
 }
 
-void pybuffer_writeint32(pybuffer *buffer, int32_t number, size_t offset, int byteorder, PYBUFFER_ERROR)
+size_t pybuffer_writeint32(pybuffer *buffer, int32_t number, size_t offset, int byteorder, PYBUFFER_ERROR)
 {
     return pybuffer_writeuint32(buffer, (uint32_t)number, offset, byteorder, error);
 }
 
-void pybuffer_writeuint64(pybuffer *buffer, uint64_t number, size_t offset, int byteorder, PYBUFFER_ERROR)
+size_t pybuffer_writeuint64(pybuffer *buffer, uint64_t number, size_t offset, int byteorder, PYBUFFER_ERROR)
 {
-    if (offset + 8 >= buffer->size) {
+    if (offset + 8 > buffer->size) {
         PYBUFFER_SET_ERROR(PYBUFFER_OUT_OF_BOUNDS);
-        return;
+        return 0;
     }
     offset = PYBUFFER_BASEOFFSET(offset, byteorder, 4);
     buffer->data[PYBUFFER_OFFSET(offset, byteorder, 0)] = number & 0xFF;
@@ -197,9 +195,10 @@ void pybuffer_writeuint64(pybuffer *buffer, uint64_t number, size_t offset, int 
     buffer->data[PYBUFFER_OFFSET(offset, byteorder, 5)] = (number >> 40) & 0xFF;
     buffer->data[PYBUFFER_OFFSET(offset, byteorder, 6)] = (number >> 48) & 0xFF;
     buffer->data[PYBUFFER_OFFSET(offset, byteorder, 7)] = (number >> 56) & 0xFF;
+    return 8;
 }
 
-void pybuffer_writeint64(pybuffer *buffer, int64_t number, size_t offset, int byteorder, PYBUFFER_ERROR)
+size_t pybuffer_writeint64(pybuffer *buffer, int64_t number, size_t offset, int byteorder, PYBUFFER_ERROR)
 {
     return pybuffer_writeuint64(buffer, (uint64_t)number, offset, byteorder, error);
 }

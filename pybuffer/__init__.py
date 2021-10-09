@@ -128,6 +128,7 @@ _pybuffer.decl_function(
 )
 _pybuffer.decl_function(
     'writeuint8',
+    _ctypes.c_size_t,
     buffer=_ctypes.c_void_p,
     number=_ctypes.c_uint8,
     offset=_ctypes.c_size_t,
@@ -136,6 +137,7 @@ _pybuffer.decl_function(
 )
 _pybuffer.decl_function(
     'writeint8',
+    _ctypes.c_size_t,
     buffer=_ctypes.c_void_p,
     number=_ctypes.c_int8,
     offset=_ctypes.c_size_t,
@@ -144,6 +146,7 @@ _pybuffer.decl_function(
 )
 _pybuffer.decl_function(
     'writeuint16',
+    _ctypes.c_size_t,
     buffer=_ctypes.c_void_p,
     number=_ctypes.c_uint16,
     offset=_ctypes.c_size_t,
@@ -152,6 +155,7 @@ _pybuffer.decl_function(
 )
 _pybuffer.decl_function(
     'writeint16',
+    _ctypes.c_size_t,
     buffer=_ctypes.c_void_p,
     number=_ctypes.c_int16,
     offset=_ctypes.c_size_t,
@@ -160,6 +164,7 @@ _pybuffer.decl_function(
 )
 _pybuffer.decl_function(
     'writeuint32',
+    _ctypes.c_size_t,
     buffer=_ctypes.c_void_p,
     number=_ctypes.c_uint32,
     offset=_ctypes.c_size_t,
@@ -168,6 +173,7 @@ _pybuffer.decl_function(
 )
 _pybuffer.decl_function(
     'writeint32',
+    _ctypes.c_size_t,
     buffer=_ctypes.c_void_p,
     number=_ctypes.c_int32,
     offset=_ctypes.c_size_t,
@@ -176,6 +182,7 @@ _pybuffer.decl_function(
 )
 _pybuffer.decl_function(
     'writeuint64',
+    _ctypes.c_size_t,
     buffer=_ctypes.c_void_p,
     number=_ctypes.c_uint64,
     offset=_ctypes.c_size_t,
@@ -184,6 +191,7 @@ _pybuffer.decl_function(
 )
 _pybuffer.decl_function(
     'writeint64',
+    _ctypes.c_size_t,
     buffer=_ctypes.c_void_p,
     number=_ctypes.c_int64,
     offset=_ctypes.c_size_t,
@@ -340,12 +348,17 @@ class Buffer:
         else:
             raise ValueError('byteorder should be \'little\' or \'big\'')
 
+    def _check_sign(self, number):
+        if number < 0:
+            raise OverflowError('can\'t convert negative int to unsigned')
+
     def writeint8(self, number, byteorder, offset=None, *, signed=False):
         byteorder = self._get_byteorder(byteorder)
         offset = self._get_offset(offset)
         if signed:
             return _pybuffer.writeint8(self.__buffer__, number, offset, byteorder)
         else:
+            self._check_sign(number)
             return _pybuffer.writeuint8(self.__buffer__, number, offset, byteorder)
 
     def writeint16(self, number, byteorder, offset=None, *, signed=False):
@@ -354,6 +367,7 @@ class Buffer:
         if signed:
             return _pybuffer.writeint16(self.__buffer__, number, offset, byteorder)
         else:
+            self._check_sign(number)
             return _pybuffer.writeuint16(self.__buffer__, number, offset, byteorder)
 
     def writeint32(self, number, byteorder, offset=None, *, signed=False):
@@ -362,6 +376,7 @@ class Buffer:
         if signed:
             return _pybuffer.writeint32(self.__buffer__, number, offset, byteorder)
         else:
+            self._check_sign(number)
             return _pybuffer.writeuint32(self.__buffer__, number, offset, byteorder)
 
     def writeint64(self, number, byteorder, offset=None, *, signed=False):
@@ -370,6 +385,7 @@ class Buffer:
         if signed:
             return _pybuffer.writeint64(self.__buffer__, number, offset, byteorder)
         else:
+            self._check_sign(number)
             return _pybuffer.writeuint64(self.__buffer__, number, offset, byteorder)
 
     def decode(self, encoding='utf-8', errors='strict'):
@@ -402,10 +418,8 @@ class Buffer:
         # https://github.com/python/cpython/blob/main/Objects/bytesobject.c#L1291-L1364
         size = 0
         for char in self:
-            if char == b'\'':
+            if char in (b'\'', b'\\', b'\t', b'\n', b'\r'):
                 size += 2
-            elif char in (b'\\', b'\t', b'\n', b'\r'):
-                size += 4
             elif char < b' ' or char >= 0x7F:
                 size += 4
             else:
@@ -416,7 +430,7 @@ class Buffer:
         i = 0
         for char in self:
             if char == b'\'' or char == b'\\':
-                i += buffer.write(('\\', char), i)
+                i += buffer.write((b'\\', char), i)
             elif char == b'\t':
                 i += buffer.write(b'\\t', i)
             elif char == b'\n':
@@ -438,5 +452,5 @@ class Buffer:
 
 
 buffer = Buffer.from_size(10)
-# buffer.writeint8(255, 'little')
+buffer.writeint16(255, 'little', signed=True)
 print(buffer)
