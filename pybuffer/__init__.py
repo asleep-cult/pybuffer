@@ -52,7 +52,8 @@ class _CBinding:
         setattr(self, name, cfunc)
 
 
-char_p = _ctypes.POINTER(_ctypes.c_char)
+_char_p = _ctypes.POINTER(_ctypes.c_char)
+_ubyte_p = _ctypes.POINTER(_ctypes.c_ubyte)
 
 _pybuffer = _CBinding(_os.path.join(_os.path.dirname(__file__), 'pybuffer.o'))
 
@@ -87,7 +88,7 @@ _pybuffer.decl_function(
 )
 _pybuffer.decl_function(
     'data',
-    char_p,
+    _char_p,
     buffer=_ctypes.c_void_p
 )
 _pybuffer.decl_function(
@@ -101,14 +102,79 @@ _pybuffer.decl_function(
     'setcharat',
     buffer=_ctypes.c_void_p,
     char=_ctypes.c_ubyte,
-    index=_ctypes.c_size_t
+    index=_ctypes.c_size_t,
+    error=True
 )
 _pybuffer.decl_function(
     'read',
-    char_p,
+    _char_p,
     buffer=_ctypes.c_void_p,
     start=_ctypes.c_size_t,
     stop=_ctypes.c_size_t,
+    error=True
+)
+_pybuffer.decl_function(
+    'readuint8',
+    _ctypes.c_uint8,
+    buffer=_ctypes.c_void_p,
+    offset=_ctypes.c_size_t,
+    byteorder=_ctypes.c_int,
+    error=True
+)
+_pybuffer.decl_function(
+    'readint8',
+    _ctypes.c_int8,
+    buffer=_ctypes.c_void_p,
+    offset=_ctypes.c_size_t,
+    byteorder=_ctypes.c_int,
+    error=True
+)
+_pybuffer.decl_function(
+    'readuint16',
+    _ctypes.c_uint16,
+    buffer=_ctypes.c_void_p,
+    offset=_ctypes.c_size_t,
+    byteorder=_ctypes.c_int,
+    error=True
+)
+_pybuffer.decl_function(
+    'readint16',
+    _ctypes.c_int16,
+    buffer=_ctypes.c_void_p,
+    offset=_ctypes.c_size_t,
+    byteorder=_ctypes.c_int,
+    error=True
+)
+_pybuffer.decl_function(
+    'readuint32',
+    _ctypes.c_uint32,
+    buffer=_ctypes.c_void_p,
+    offset=_ctypes.c_size_t,
+    byteorder=_ctypes.c_int,
+    error=True
+)
+_pybuffer.decl_function(
+    'readint32',
+    _ctypes.c_int32,
+    buffer=_ctypes.c_void_p,
+    offset=_ctypes.c_size_t,
+    byteorder=_ctypes.c_int,
+    error=True
+)
+_pybuffer.decl_function(
+    'readuint64',
+    _ctypes.c_uint32,
+    buffer=_ctypes.c_void_p,
+    offset=_ctypes.c_size_t,
+    byteorder=_ctypes.c_int,
+    error=True
+)
+_pybuffer.decl_function(
+    'readint64',
+    _ctypes.c_int64,
+    buffer=_ctypes.c_void_p,
+    offset=_ctypes.c_size_t,
+    byteorder=_ctypes.c_int,
     error=True
 )
 _pybuffer.decl_function(
@@ -296,6 +362,26 @@ class Buffer:
     def fill(self, char):
         _pybuffer.fill(self.__buffer__, charconv(char))
 
+    def _get_offset(self, offset):
+        if offset is None:
+            return 0
+        else:
+            if not isinstance(offset, int):
+                raise TypeError(f'offset should be an integer or None, got {_typename(offset)}')
+
+            if offset < 0:
+                return len(self) + offset
+
+            return offset
+
+    def _get_byteorder(self, byteorder):
+        if byteorder == 'little':
+            return _pybuffer.PYBUFFER_LITTLE_ENDIAN
+        elif byteorder == 'big':
+            return _pybuffer.PYBUFFER_BIG_ENDIAN
+        else:
+            raise ValueError('byteorder should be \'little\' or \'big\'')
+
     def read(self, start=None, stop=None):
         if start is None:
             start = 0
@@ -317,17 +403,37 @@ class Buffer:
 
         return _pybuffer.read(self.__buffer__, start, stop)[:stop - start]
 
-    def _get_offset(self, offset):
-        if offset is None:
-            return 0
+    def readint8(self, byteorder, offset=None, *, signed=False):
+        byteorder = self._get_byteorder(byteorder)
+        offset = self._get_offset(offset)
+        if signed:
+            return _pybuffer.readint8(self.__buffer__, offset, byteorder)
         else:
-            if not isinstance(offset, int):
-                raise TypeError(f'offset should be an integer or None, got {_typename(offset)}')
+            return _pybuffer.readuint8(self.__buffer__, offset, byteorder)
 
-            if offset < 0:
-                return len(self) + offset
+    def readint16(self, byteorder, offset=None, *, signed=False):
+        byteorder = self._get_byteorder(byteorder)
+        offset = self._get_offset(offset)
+        if signed:
+            return _pybuffer.readint16(self.__buffer__, offset, byteorder)
+        else:
+            return _pybuffer.readuint16(self.__buffer__, offset, byteorder)
 
-            return offset
+    def readint32(self, byteorder, offset=None, *, signed=False):
+        byteorder = self._get_byteorder(byteorder)
+        offset = self._get_offset(offset)
+        if signed:
+            return _pybuffer.readint32(self.__buffer__, offset, byteorder)
+        else:
+            return _pybuffer.readuint32(self.__buffer__, offset, byteorder)
+
+    def readint64(self, byteorder, offset=None, *, signed=False):
+        byteorder = self._get_byteorder(byteorder)
+        offset = self._get_offset(offset)
+        if signed:
+            return _pybuffer.readint64(self.__buffer__, offset, byteorder)
+        else:
+            return _pybuffer.readuint64(self.__buffer__, offset, byteorder)
 
     def write(self, data, offset=None):
         try:
@@ -339,14 +445,6 @@ class Buffer:
                 raise TypeError(f'cannot write {_typename(data)} object to Buffer') from None
 
         return _pybuffer.write(self.__buffer__, data, len(data), self._get_offset(offset))
-
-    def _get_byteorder(self, byteorder):
-        if byteorder == 'little':
-            return _pybuffer.PYBUFFER_LITTLE_ENDIAN
-        elif byteorder == 'big':
-            return _pybuffer.PYBUFFER_BIG_ENDIAN
-        else:
-            raise ValueError('byteorder should be \'little\' or \'big\'')
 
     def _check_sign(self, number):
         if number < 0:
@@ -395,6 +493,11 @@ class Buffer:
     def __len__(self):
         return _pybuffer.size(self.__buffer__)
 
+    def __iter__(self):
+        data = _ctypes.cast(_pybuffer.data(self.__buffer__), _ubyte_p)
+        for i in range(len(self)):
+            yield _chartable[data[i]]
+
     def __getitem__(self, indice):
         if not isinstance(indice, int):
             raise TypeError(f'Buffer indices should be integers, got {_typename(indice)}')
@@ -411,7 +514,7 @@ class Buffer:
         if indice < 0:
             indice = len(self) + indice
 
-        _pybuffer.setcharat(self.__buffer__, indice, char)
+        _pybuffer.setcharat(self.__buffer__, indice, charconv(char))
 
     def __repr__(self):
         # Mainly copied from bytes.__repr__
@@ -449,8 +552,3 @@ class Buffer:
     def __del__(self):
         if self.__buffer__ is not None:
             _pybuffer.free(self.__buffer__)
-
-
-buffer = Buffer.from_size(10)
-buffer.writeint16(255, 'little', signed=True)
-print(buffer)
